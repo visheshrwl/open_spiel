@@ -196,7 +196,7 @@ class ShogiState : public State {
     return down_cast<const ShogiGame*>(GetGame().get());
   }
 
-  std::string StartFEN() const;
+  std::string StartSFEN() const;
 
  protected:
   void DoApplyAction(Action action) override;
@@ -218,10 +218,9 @@ class ShogiState : public State {
   ShogiBoard start_board_;
   // We store the current board position as an optimization.
   ShogiBoard current_board_;
-  // This FEN string is used only when NewInitialState is called with a specific
-  // initial FEN.
-  std::string specific_initial_fen_;
-  bool king_of_hill_;
+  // This SFEN string is used only when NewInitialState is called with a specific
+  // initial SFEN.
+  std::string specific_initial_sfen_;
 
   // RepetitionTable records how many times the given hash exists in the history
   // stack (including the current board).

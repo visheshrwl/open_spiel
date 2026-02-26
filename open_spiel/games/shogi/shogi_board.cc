@@ -32,7 +32,6 @@
 #include "open_spiel/abseil-cpp/absl/strings/str_split.h"
 #include "open_spiel/abseil-cpp/absl/strings/string_view.h"
 #include "open_spiel/abseil-cpp/absl/types/optional.h"
-#include "open_spiel/games/shogi/shogi_common.h"
 #include "open_spiel/spiel_utils.h"
 
 namespace open_spiel {
@@ -46,7 +45,7 @@ PieceType PromotedType(PieceType type) {
     case PieceType::kKnight:
       return PieceType::kKnightP;
     case PieceType::kSilver:
-      return PieceType::kSilverpP;
+      return PieceType::kSilverP;
     case PieceType::kBishop:
       return PieceType::kBishopP;
     case PieceType::kRook:
@@ -54,7 +53,7 @@ PieceType PromotedType(PieceType type) {
     case PieceType::kPawn:
       return PieceType::kPawnP;
 	}
-	return kEmpty; // Does not promote
+	return PieceType::kEmpty; // Does not promote
 }
 
 PieceType UnpromotedType(PieceType type) {
@@ -73,7 +72,7 @@ PieceType UnpromotedType(PieceType type) {
     case PieceType::kPawnP:
       return PieceType::kPawn;
 	}
-	return kEmpty; // Does not unpromote
+	return PieceType::kEmpty; // Does not unpromote
 }
 
 
@@ -196,7 +195,7 @@ std::string Move::ToString() const {
 std::string Move::ToLAN() const {
   if (drop) {
     std::string move_text;
-    PieceType from_type = piece.tye;
+    PieceType from_type = piece.type;
     move_text += PieceTypeToString(from_type);
     move_text += '@';
     absl::StrAppend(&move_text, SquareToString(to));
@@ -278,43 +277,42 @@ ShogiBoard::ShogiBoard() {
 			return absl::nullopt;
 		}
 	}
-  if (hand_str == "-") {
-    return true;
-  }
+  if (hand_str != "-") {
 
-  int count = 0;
+		int count = 0;
 
-  for (size_t i = 0; i < hand_str.size(); ++i) {
-    char c = hand_str[i];
+		for (size_t i = 0; i < hand_str.size(); ++i) {
+			char c = hand_str[i];
 
-    // Accumulate multi-digit counts
-    if (std::isdigit(c)) {
-      count = count * 10 + (c - '0');
-      continue;
-    }
+			// Accumulate multi-digit counts
+			if (std::isdigit(c)) {
+				count = count * 10 + (c - '0');
+				continue;
+			}
 
-    // If no digit before piece, count is 1
-    if (count == 0) {
-      count = 1;
-    }
+			// If no digit before piece, count is 1
+			if (count == 0) {
+				count = 1;
+			}
 
-    auto piece_type = PieceTypeFromChar(c);
-    if (!piece_type) {
-      std::cerr << "Invalid piece in SFEN hand: " << c << std::endl;
-      return false;
-    }
-    Color color = std::isupper(c) ? Color::kBlack : Color::kWhite;
+			auto piece_type = PieceTypeFromChar(c);
+			if (!piece_type) {
+				std::cerr << "Invalid piece in SFEN hand: " << c << std::endl;
+				return absl::nullopt;
+			}
+			Color color = std::isupper(c) ? Color::kBlack : Color::kWhite;
 
-    Pocket& pocket = (color == Color::kBlack)
-                         ? black_pocket
-                         : white_pocket;
+			Pocket& pocket = (color == Color::kBlack)
+													 ? board.black_pocket_
+													 : board.white_pocket_;
 
-    for (int j = 0; j < count; ++j) {
-      pocket.Increment(*piece_type);
-    }
+			for (int j = 0; j < count; ++j) {
+				pocket.Increment(*piece_type);
+			}
 
-    count = 0;  // reset for next piece
-  }
+			count = 0;  // reset for next piece
+		}
+	}
 
   if (side_to_move == "b") {
     board.SetToPlay(Color::kBlack);
@@ -351,9 +349,7 @@ void ShogiBoard::GenerateLegalMoves(
     generating = false; \
   }
 
-  if (allow_pass_move_) YIELD(kPassMove);
-
-  GenerateDropDestinations_(color, settings, yield);
+  GenerateDropDestinations_(color, yield);
 
   for (int8_t y = 0; y < kBoardSize && generating; ++y) {
     for (int8_t x = 0; x < kBoardSize && generating; ++x) {
@@ -371,11 +367,11 @@ void ShogiBoard::GenerateLegalMoves(
           case PieceType::kPawn:
             GeneratePawnDestinations_(
                 sq, color,
-                [&yield, &piece, &sq, &generating](const Square& to) {
+                [&yield, &piece, &sq, &generating, color](const Square& to) {
 								  if (!StuckPiece(color, piece, to.y)) {
                     YIELD(Move(sq, to, piece));
 									}
-									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y) {
+									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y)) {
                      YIELD(Move(sq, to, piece, true));
 									}
                 });
@@ -383,11 +379,11 @@ void ShogiBoard::GenerateLegalMoves(
 					case PieceType::kLance:
             GenerateLanceDestinations_(
                 sq, color,
-                [&yield, &sq, &piece, &generating](const Square& to) {
+                [&yield, &sq, &piece, &generating, color](const Square& to) {
 								  if (!StuckPiece(color, piece, to.y)) {
                     YIELD(Move(sq, to, piece));
 									}
-									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y) {
+									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y)) {
                      YIELD(Move(sq, to, piece, true));
 									}
                 });
@@ -395,11 +391,11 @@ void ShogiBoard::GenerateLegalMoves(
           case PieceType::kKnight:
             GenerateKnightDestinations_(
                 sq, color,
-                [&yield, &sq, &piece, &generating](const Square& to) {
+                [&yield, &sq, &piece, &generating, color](const Square& to) {
 								  if (!StuckPiece(color, piece, to.y)) {
                     YIELD(Move(sq, to, piece));
 									}
-									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y) {
+									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y)) {
                      YIELD(Move(sq, to, piece, true));
 									}
                 });
@@ -407,9 +403,9 @@ void ShogiBoard::GenerateLegalMoves(
 					case PieceType::kSilver:
             GenerateSilverDestinations_(
                 sq, color,
-                [&yield, &sq, &piece, &generating](const Square& to) {
+                [&yield, &sq, &piece, &generating, color](const Square& to) {
                   YIELD(Move(sq, to, piece));
-									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y) {
+									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y)) {
                      YIELD(Move(sq, to, piece, true));
 									}
                 });
@@ -428,9 +424,9 @@ void ShogiBoard::GenerateLegalMoves(
           case PieceType::kRook:
             GenerateRookDestinations_(
                 sq, color,
-                [&yield, &sq, &piece, &generating](const Square& to) {
+                [&yield, &sq, &piece, &generating, color](const Square& to) {
                   YIELD(Move(sq, to, piece));
-									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y) {
+									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y)) {
                      YIELD(Move(sq, to, piece, true));
 									}
                 });
@@ -451,8 +447,8 @@ void ShogiBoard::GenerateLegalMoves(
             GenerateBishopDestinations_(
                 sq, color,
                 [&yield, &sq, &piece, &generating](const Square& to) {
-                  YIELD(Move(sq, to, piece));
-									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y) {
+                  YIELD(Move(sq, to, piece, color));
+									if (InPromoZone(color, sq.y) || InPromoZone(color, to.y)) {
                      YIELD(Move(sq, to, piece, true));
 									}
                 });
@@ -481,12 +477,8 @@ void ShogiBoard::GenerateLegalMoves(
 #undef YIELD
 }
 
-void ShogiBoard::GenerateLegalPawnCaptures(const MoveYieldFn& yield,
-                                                Color color) const {
-}
 
 // TODO forbid pawn drop with checkmate
-// TODO forbid dropping 2 pawns in the same column
 template <typename YieldFn>
 void ShogiBoard::GenerateDropDestinations_(
     Color player, const PseudoLegalMoveSettings& settings,
@@ -665,12 +657,6 @@ absl::optional<Move> ShogiBoard::ParseLANMove(const std::string& move) const {
 }
 
 void ShogiBoard::ApplyMove(const Move& move) {
-  // Skip applying a move if it's a pass.
-  if (move == kPassMove) {
-    if (to_play_ == Color::kBlack) ++move_number_;
-    SetToPlay(OppColor(to_play_));
-    return;
-  }
 
   // We remove the moving piece from the original
   // square or pocket and put it on the destination square, overwriting whatever was

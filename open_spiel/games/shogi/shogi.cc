@@ -34,7 +34,6 @@
 #include "open_spiel/game_parameters.h"
 #include "open_spiel/games/shogi/shogi.h"
 #include "open_spiel/games/shogi/shogi_board.h"
-#include "open_spiel/games/shogi/shogi_common.h"
 #include "open_spiel/observer.h"
 #include "open_spiel/spiel.h"
 #include "open_spiel/spiel_globals.h"
@@ -106,16 +105,16 @@ void AddBinaryPlane(bool val, absl::Span<float>::iterator& value_it) {
 ShogiState::ShogiState(std::shared_ptr<const Game> game)
     : State(game) {
   const auto* g = ParentGame();
-  auto maybe_board = ShogiBoard::BoardFromFEN(kDefaultStandardFEN);
+  auto maybe_board = ShogiBoard::BoardFromSFEN(kDefaultStandardSFEN);
   repetitions_[current_board_.HashValue()] = 1;
 }
 
 ShogiState::ShogiState(std::shared_ptr<const Game> game,
-                                 const std::string& fen)
+                                 const std::string& sfen)
     : State(game) {
   auto* g = static_cast<const ShogiGame*>(game.get());
-  specific_initial_fen_ = fen;
-  auto maybe_board = ShogiBoard::BoardFromFEN(fen);
+  specific_initial_sfen_ = sfen;
+  auto maybe_board = ShogiBoard::BoardFromSFEN(sfen);
   SPIEL_CHECK_TRUE(maybe_board);
   start_board_ = *maybe_board;
   current_board_ = start_board_;
@@ -217,7 +216,7 @@ Move ActionToMove(Action action, const ShogiBoard& board) {
 std::string ShogiState::ActionToString(Player player,
                                             Action action) const {
   Move move = ActionToMove(action, Board());
-  return move.ToSAN(Board());
+  return move.ToLAN();
 }
 
 std::string ShogiState::DebugString() const {
@@ -225,7 +224,7 @@ std::string ShogiState::DebugString() const {
 }
 
 std::string ShogiState::ToString() const {
-  return Board().ToFEN();
+  return Board().ToSFEN();
 }
 
 std::vector<double> ShogiState::Returns() const {
@@ -370,14 +369,14 @@ std::string ShogiState::Serialize() const {
   // If the specific_initial_fen is empty, the deserializer will use the
   // default NewInitialState(). Otherwise, the deserializer will specify
   // the specific initial fen by calling NewInitialState(string).
-  absl::StrAppend(&state_str, "FEN: ", specific_initial_fen_, "\n");
+  absl::StrAppend(&state_str, "FEN: ", specific_initial_sfen_, "\n");
   std::vector<Action> history = History();
   absl::StrAppend(&state_str, absl::StrJoin(history, "\n"), "\n");
   return state_str;
 }
 
-std::string ShogiState::StartFEN() const {
-  return start_board_.ToFEN();
+std::string ShogiState::StartSFEN() const {
+  return start_board_.ToSFEN();
 }
 
 std::unique_ptr<State> ShogiGame::DeserializeState(

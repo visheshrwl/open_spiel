@@ -22,21 +22,133 @@
 #include <ostream>
 #include <string>
 #include <utility>
-
+#include "open_spiel/abseil-cpp/absl/random/uniform_int_distribution.h"
 #include "open_spiel/abseil-cpp/absl/types/optional.h"
-#include "open_spiel/games/shogi/shogi_common.h"
 #include "open_spiel/spiel_utils.h"
 
 namespace open_spiel {
 namespace shogi {
 
-using shogi_common::kInvalidSquare;  // NOLINT
-using shogi_common::Offset;
-using shogi_common::Square;
-using shogi_common::SquareToString;  // NOLINT
+constexpr int kBoardSize = 9;
+constexpr int kNumSquares = 81;
+constexpr int kNumBoardMoves = 81 * 81 * 2;
+constexpr int kNumDropMoves  = 7 * 81;
+
+struct Offset {
+  int8_t x_offset;
+  int8_t y_offset;
+
+  bool operator==(const Offset& other) const {
+    return x_offset == other.x_offset && y_offset == other.y_offset;
+  }
+};
+
+// x corresponds to file (column / letter)
+// y corresponds to rank (row / number).
+struct Square {
+  Square& operator+=(const Offset& offset) {
+    x += offset.x_offset;
+    y += offset.y_offset;
+    return *this;
+  }
+
+  bool operator==(const Square& other) const {
+    return x == other.x && y == other.y;
+  }
+
+  bool operator!=(const Square& other) const { return !(*this == other); }
+
+  // Required by std::set.
+  bool operator<(const Square& other) const {
+    if (x != other.x) {
+      return x < other.x;
+    } else {
+      return y < other.y;
+    }
+  }
+
+  std::string ToString() const {
+    std::string s;
+    s.push_back('a' + x);
+    s.push_back('1' + y);
+    return s;
+  }
+
+  int Index() const {
+    return y * kBoardSize + x;
+  }
+
+  int8_t x;
+  int8_t y;
+};
+constexpr Square kInvalidSquare{-1, -1};
+
+inline std::string SquareToString(const Square& square) {
+  if (square == kInvalidSquare) {
+    return "None";
+  } else {
+    std::string s;
+    s.push_back('a' + square.x);
+    s.push_back('1' + square.y);
+    return s;
+  }
+}
+
+inline Square operator+(const Square& sq, const Offset& offset) {
+  int8_t x = sq.x + offset.x_offset;
+  int8_t y = sq.y + offset.y_offset;
+  return Square{x, y};
+}
+
+inline std::ostream& operator<<(std::ostream& stream, const Square& sq) {
+  return stream << SquareToString(sq);
+}
+
+template <typename T, std::size_t InnerDim, std::size_t... OtherDims>
+class ZobristTable {
+ public:
+  using Generator = std::mt19937_64;
+  using NestedTable = ZobristTable<T, OtherDims...>;
+
+  explicit ZobristTable(Generator::result_type seed) {
+    Generator generator(seed);
+    absl::uniform_int_distribution<Generator::result_type> dist;
+    data_.reserve(InnerDim);
+    for (std::size_t i = 0; i < InnerDim; ++i) {
+      data_.emplace_back(dist(generator));
+    }
+  }
+
+  const NestedTable& operator[](std::size_t inner_index) const {
+    return data_[inner_index];
+  }
+
+ private:
+  std::vector<NestedTable> data_;
+};
+
+// 1-dimensional array of uniform random numbers.
+template <typename T, std::size_t InnerDim>
+class ZobristTable<T, InnerDim> {
+ public:
+  using Generator = std::mt19937_64;
+
+  explicit ZobristTable(Generator::result_type seed) : data_(InnerDim) {
+    Generator generator(seed);
+    absl::uniform_int_distribution<T> dist;
+    for (auto& field : data_) {
+      field = dist(generator);
+    }
+  }
+
+  T operator[](std::size_t index) const { return data_[index]; }
+
+ private:
+  std::vector<T> data_;
+};
 
 template <std::size_t... Dims>
-using ZobristTableU64 = shogi_common::ZobristTable<uint64_t, Dims...>;
+using ZobristTableU64 = ZobristTable<uint64_t, Dims...>;
 
 enum class Color : int8_t { kBlack = 0, kWhite = 1, kEmpty = 2 };
 
@@ -57,7 +169,7 @@ enum class PieceType : int8_t {
   kKing = 1,
 	kLance = 2,
 	kKnight = 3,
-	KSilver = 4,
+	kSilver = 4,
 	kGold = 5,
 	kPawn = 6,
 	kBishop = 7,
@@ -70,7 +182,7 @@ enum class PieceType : int8_t {
 	kRookP = 14
 };
 
-static inline constexpr std::array<PieceType, 10> kPieceTypes = {
+static inline constexpr std::array<PieceType, 13> kPieceTypes = {
     {PieceType::kKing, PieceType::kLance, PieceType::kKnight,
 		PieceType::kSilver, PieceType::kGold, PieceType::kPawn,
 		PieceType::kBishop, PieceType::kRook,  PieceType::kLanceP,
@@ -80,12 +192,10 @@ static inline constexpr std::array<PieceType, 10> kPieceTypes = {
 PieceType PromotedType(PieceType type);
 PieceType UnpromotedType(PieceType type);
 
-// Tries to parse piece type from char ('K', 'Q', 'R', 'B', 'N', 'P').
 // Case-insensitive.
 absl::optional<PieceType> PieceTypeFromChar(char c);
 
-// Converts piece type to one character strings - "K", "Q", "R", "B", "N", "P".
-// p must be one of the enumerator values of PieceType.
+// one character for unpromoted types, appen + for promoted
 std::string PieceTypeToString(PieceType p, bool uppercase = true);
 
 struct Piece {
@@ -178,30 +288,9 @@ bool IsMoveCharacter(char c);
 
 std::pair<std::string, std::string> SplitAnnotations(const std::string& move);
 
-inline const std::string kDefaultStandardFEN =
-    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-inline const std::string kDefaultStandardiSFEN =
-  "lnsgkgsnl/1r5b1/p1ppppppp/9/9/9/P1PPPPPPP/1B5R1/LNSGKGSNL b - 1"
+inline const std::string kDefaultStandardSFEN =
+  "lnsgkgsnl/1r5b1/p1ppppppp/9/9/9/P1PPPPPPP/1B5R1/LNSGKGSNL b - 1";
 using ObservationTable = std::array<bool, kNumSquares>;
-
-// Specifies policy for pseudo legal moves generation.
-enum PseudoLegalMoveSettings {
-  // Standard legal moves (do not allow to move past enemy pieces).
-  kAcknowledgeEnemyPieces,
-  // Pseudo-legal moves, where a piece can move anywhere (according to the rules
-  // for that piece), except if it was blocked from doing so by other player's
-  // pieces. This is used in games, where the player may not know the position
-  // of an enemy piece (like Kriegspiel or RBC) and it can try to move past the
-  // enemy (for example a rook can try to move the other side of the board, even
-  // if it is in fact blocked by an unseen opponent's pawn).
-  kBreachEnemyPieces,
-};
-
-// Some chess variants (RBC) allow a "pass" action/move
-inline constexpr open_spiel::Action kPassAction = 0;
-// The linter won't let me have a line-continuation indent
-inline const shogi::Move kPassMove = Move(
-    Square{-1, -1}, Square{-1, -1}, Piece{Color::kEmpty, PieceType::kEmpty});
 
 
 class Pocket {
@@ -211,7 +300,7 @@ class Pocket {
     return {PieceType::kPawn, PieceType::kLance, PieceType::kKnight,
 			      PieceType::kSilver, PieceType::kGold, PieceType::kBishop,
             PieceType::kRook};
-  }
+  };
 
   // Modifiers
   void Increment(PieceType piece);
@@ -236,7 +325,7 @@ class ShogiBoard {
   // Constructs a chess board at the given position in Forsyth-Edwards Notation.
   // https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
 	ShogiBoard();
-  static absl::optional<ShogiBoard> BoardFromFEN(
+  static absl::optional<ShogiBoard> BoardFromSFEN(
       const std::string& fen
   );
 
@@ -357,7 +446,7 @@ class ShogiBoard {
   // Constructs a string describing the chess board position in Forsyth-Edwards
   // Notation. https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
   // Modified to support promoted and pocket pieces.
-  std::string ToFEN(bool shredder = false) const;
+  std::string ToSFEN() const;
 
   bool IsBreachingMove(Move move) const;
   void BreachingMoveToCaptureMove(Move* move) const;
@@ -465,7 +554,6 @@ bool StuckPiece(Color player, PieceType ptype, int8_t y);
 
 bool InPromoZone(Color player, int8_t y);
 
-std::string DefaultFen();
 
 }  // namespace shogi
 }  // namespace open_spiel
