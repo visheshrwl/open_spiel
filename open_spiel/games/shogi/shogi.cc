@@ -106,6 +106,9 @@ ShogiState::ShogiState(std::shared_ptr<const Game> game)
     : State(game) {
   const auto* g = ParentGame();
   auto maybe_board = ShogiBoard::BoardFromSFEN(kDefaultStandardSFEN);
+	SPIEL_CHECK_TRUE(maybe_board.has_value());
+	start_board_ = *maybe_board;
+  current_board_ = start_board_;
   repetitions_[current_board_.HashValue()] = 1;
 }
 
@@ -194,9 +197,12 @@ Move ActionToMove(Action action, const ShogiBoard& board) {
 		bool promo = (action % 2 == 1);
 		action /= 2;
 		int to = action % kNumSquares;
-		Square to_square = Square{to % kNumSquares, to / kNumSquares};
+		Square to_square = Square{
+			static_cast<int8_t>(to % kBoardSize),
+			static_cast<int8_t>(to / kBoardSize)};
 		int from = action / kNumSquares;
-		Square from_square = Square{from % kNumSquares, from / kNumSquares};
+		Square from_square = Square{static_cast<int8_t>(from % kBoardSize),
+			static_cast<int8_t>(from / kBoardSize)};
 		Piece piece = {board.ToPlay(), board.at(from_square).type};
 		SPIEL_CHECK_NE(board.at(from_square).type, PieceType::kEmpty);
 		return Move(from_square, to_square, piece, promo);
@@ -204,9 +210,10 @@ Move ActionToMove(Action action, const ShogiBoard& board) {
 		action -= kNumBoardMoves;
 		Square from_square = Square{-1, -1}; // dummy value for drops
 
-		int to = action % 81;
-		int piece_index = action / 81;
-		Square to_square = Square{to % kNumSquares, to / kNumSquares};
+		int to = action % kNumSquares;
+		int piece_index = action / kNumSquares;
+		Square to_square = Square{static_cast<int8_t>(to % kBoardSize),
+			static_cast<int8_t>(to / kBoardSize)};
 		PieceType ptype = Pocket::PocketPieceType(piece_index);
 		Piece piece = {board.ToPlay(), ptype};
 		return Move(from_square, to_square, piece, false, true);

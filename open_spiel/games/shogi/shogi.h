@@ -77,27 +77,6 @@ inline int ColorToPlayer(Color c) {
 
 inline int OtherPlayer(Player player) { return player == Player{0} ? 1 : 0; }
 
-inline constexpr std::array<PieceType, 3> kUnderPromotionIndexToType = {
-    PieceType::kRook, PieceType::kBishop, PieceType::kKnight};
-inline constexpr std::array<Offset, 3> kUnderPromotionDirectionToOffset = {
-    {{0, 1}, {1, 1}, {-1, 1}}};
-inline constexpr int kNumUnderPromotions =
-    kUnderPromotionIndexToType.size() * kUnderPromotionDirectionToOffset.size();
-
-// Reads a bitfield within action, with LSB at offset, and length bits long (up
-// to 8).
-inline uint8_t GetField(Action action, int offset, int length) {
-  return (action >> offset) & ((1ULL << length) - 1);
-}
-
-// Sets a bitfield within action, with LSB at offset, and length bits long (up
-// to 8) to value.
-inline void SetField(int offset, int length, uint8_t value, Action* action) {
-  uint32_t mask = ((1ULL << length) - 1) << offset;
-  *action &= ~mask;
-  *action |= static_cast<Action>(value) << offset;
-}
-
 // Returns index (0 ... kNumSquares - 1) of a square
 // ({0, 0} ... {kBoardSize-1, kBoardSize-1}).
 inline uint8_t SquareToIndex(const Square& square) {
@@ -137,8 +116,6 @@ class ShogiState : public State {
   // https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
   ShogiState(std::shared_ptr<const Game> game, const std::string& sfen);
   ShogiState(const ShogiState&) = default;
-
-  ShogiState& operator=(const ShogiState&) = default;
 
   Player CurrentPlayer() const override;
   std::vector<Action> LegalActions() const override;

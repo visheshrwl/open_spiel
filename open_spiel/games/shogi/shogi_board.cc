@@ -52,6 +52,8 @@ PieceType PromotedType(PieceType type) {
       return PieceType::kRookP;
     case PieceType::kPawn:
       return PieceType::kPawnP;
+		default:
+			return PieceType::kEmpty;
 	}
 	return PieceType::kEmpty; // Does not promote
 }
@@ -71,6 +73,8 @@ PieceType UnpromotedType(PieceType type) {
       return PieceType::kRook;
     case PieceType::kPawnP:
       return PieceType::kPawn;
+		default:
+			return PieceType::kEmpty;
 	}
 	return PieceType::kEmpty; // Does not unpromote
 }
@@ -145,7 +149,7 @@ std::string PieceTypeToString(PieceType p, bool uppercase) {
     case PieceType::kSilver:
       return uppercase ? "S" : "s";
     case PieceType::kGold:
-      return uppercase ? "G" : "G";
+      return uppercase ? "G" : "g";
     case PieceType::kBishop:
       return uppercase ? "B" : "b";
     case PieceType::kRook:
@@ -212,8 +216,10 @@ std::string Move::ToLAN() const {
 	return absl::StrCat(SquareToString(from), SquareToString(to), promotion);
 }
 
-ShogiBoard::ShogiBoard() {
+ShogiBoard::ShogiBoard() 
+  : to_play_(Color::kBlack), move_number_(1) {
   board_.fill(kEmptyPiece);
+
 }
 
 /*static*/ absl::optional<ShogiBoard> ShogiBoard::BoardFromSFEN(
@@ -327,6 +333,7 @@ ShogiBoard::ShogiBoard() {
     return absl::nullopt;
   }
   board.SetMovenumber(std::stoi(move_number));
+	return board;
 }
 
 
@@ -947,7 +954,8 @@ void ShogiBoard::GenerateGoldDestinations_(
 	 {Offset{0,  1}, Offset{0, -1}, Offset{1,  0},
 		 Offset{-1, 0}, Offset{1,  1},Offset{-1, 1}};
   for (const auto& offset : kGoldOffsets) {
-		Offset real_offset = Offset{offset.x_offset, y_direction * offset.y_offset}; 
+		Offset real_offset = Offset{offset.x_offset,
+			static_cast<int8_t>(y_direction * offset.y_offset)}; 
     Square dest = sq + real_offset;
     if (InBoardArea(dest) && IsEmptyOrEnemy(dest, color)) {
       yield(dest);
@@ -964,7 +972,8 @@ void ShogiBoard::GenerateSilverDestinations_(
    {Offset{1,  -1}, Offset{1, 0}, Offset{1,  1},
 		 Offset{-1, -1}, Offset{-1, 1}};
   for (const auto& offset : kSilverOffsets) {
-    Offset real_offset = Offset{offset.x_offset, y_direction * offset.y_offset};
+    Offset real_offset = Offset{offset.x_offset,
+			static_cast<int8_t>(y_direction * offset.y_offset)};
     Square dest = sq + real_offset;
     if (InBoardArea(dest) && IsEmptyOrEnemy(dest, color)) {
       yield(dest);
@@ -980,7 +989,8 @@ void ShogiBoard::GenerateKnightDestinations_(
   static const std::array<Offset, 2> kKnightOffsets =
    {Offset{-1,  2}, Offset{1, 2}};
   for (const auto& offset : kKnightOffsets) {
-    Offset real_offset = Offset{offset.x_offset, y_direction * offset.y_offset};
+    Offset real_offset = Offset{offset.x_offset,
+			 static_cast<int8_t>(y_direction * offset.y_offset)};
     Square dest = sq + real_offset;
     if (InBoardArea(dest) && IsEmptyOrEnemy(dest, color)) {
       yield(dest);
@@ -996,7 +1006,8 @@ void ShogiBoard::GeneratePawnDestinations_(
   static const std::array<Offset, 1> kPawnOffsets =
    {{1,  0}};
   for (const auto& offset : kPawnOffsets) {
-    Offset real_offset = Offset{offset.x_offset, y_direction * offset.y_offset};
+    Offset real_offset = Offset{offset.x_offset,
+			 static_cast<int8_t>(y_direction * offset.y_offset)};
     Square dest = sq + real_offset;
     if (InBoardArea(dest) && IsEmptyOrEnemy(dest, color)) {
       yield(dest);
@@ -1067,10 +1078,10 @@ std::string ShogiBoard::ToSFEN() const {
   std::string sfen;
 
   // 1. Board
-  for (int y = kBoardSize - 1; y >= 0; --y) {
+  for (int8_t y = kBoardSize - 1; y >= 0; --y) {
     int empty = 0;
 
-    for (int x = 0; x < kBoardSize; ++x) {
+    for (int8_t x = 0; x < kBoardSize; ++x) {
       Piece p = at(Square{x, y});
 
       if (p.type == PieceType::kEmpty) {
@@ -1085,12 +1096,12 @@ std::string ShogiBoard::ToSFEN() const {
       bool upper = (p.color == Color::kBlack);
 			sfen += PieceTypeToString(p.type, upper);
 
-			if (empty > 0) {
-				sfen += std::to_string(empty);
-			}
 
-			if (y > 0) sfen += '/';
 		}
+		if (empty > 0) {
+			sfen += std::to_string(empty);
+		}
+		if (y > 0) sfen += '/';
   }
 
   // 2. Side
