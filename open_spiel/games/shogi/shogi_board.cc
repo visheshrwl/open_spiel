@@ -195,15 +195,15 @@ std::string Move::ToString() const {
     std::string move_text;
     PieceType from_type = piece.type;
     move_text += PieceTypeToString(from_type);
-    move_text += '@';
-    absl::StrAppend(&move_text, SquareToString(to));
+    move_text += '*';
+    absl::StrAppend(&move_text, to.ToString());
     return move_text;
   }
 	std::string promotion;
 	if (promote) {
 		promotion = "+";
 	}
-	return absl::StrCat(SquareToString(from), SquareToString(to), promotion);
+	return absl::StrCat(from.ToString(), to.ToString(), promotion);
 }
 
 ShogiBoard::ShogiBoard() 
@@ -567,7 +567,7 @@ void ShogiBoard::GenerateDropDestinations_(
 }
 
 bool StuckPiece(Color player, PieceType ptype, int8_t y) {
-	if (player == Color::kWhite) {
+	if (Forward(player) > 0) {
 	 if ((ptype == PieceType::kPawn || ptype == PieceType::kLance) 
 			 && y == kBoardSize - 1) return true;
 	 if (ptype == PieceType::kKnight && 
@@ -582,8 +582,8 @@ bool StuckPiece(Color player, PieceType ptype, int8_t y) {
 }
 
 bool InPromoZone(Color player, int8_t y) {
-	if (player == Color::kWhite && y >= kBoardSize - 3) return true;
-	if (player == Color::kBlack && y <= 2) return true;
+	if (Forward(player) > 0 && y >= kBoardSize - 3) return true;
+	if (Forward(player) < 0 && y <= 2) return true;
 	return false;
 }
 
@@ -608,16 +608,10 @@ absl::optional<Move> ShogiBoard::ParseDropMove(
   if (move.empty()) {
     return absl::nullopt;
   }
-  if (move.size() == 4 && move[1] == '@') {
+  if (move.size() == 4 && move[1] == '*') {
     char pc = move[0];
     char file = move[2];
     char rank = move[3];
-
-    // Validate square
-    if (file < 'a' || file >= ('a' + kBoardSize) || rank < '1' ||
-        rank >= ('1' + kBoardSize)) {
-      return absl::nullopt;
-    }
 
     // Parse piece type
     absl::optional<PieceType> opt = PieceTypeFromChar(pc);
@@ -633,13 +627,12 @@ absl::optional<Move> ShogiBoard::ParseDropMove(
 
     // Construct drop move
     Move drop;
-    drop.from = Square{-1, -1}; // dummpy
+    drop.from = Square{-1, -1}; // dummy
     drop.to = *to;
     drop.piece = Piece{to_play_, ptype};
 		drop.drop = true;
     return drop;
   }
-
   return absl::nullopt;
 }
 
@@ -651,12 +644,12 @@ absl::optional<Move> ShogiBoard::ParseLANMove(const std::string& move) const {
     return drop_move;
   }
 
-  // Non-drop LAN: "a1b2" or "a1b2+"
+  // Non-drop LAN: "6g6f" or "6g6f+"
   if (move.size() != 4 && move.size() != 5) return absl::nullopt;
 
   // Validate coordinate characters (optional if SquareFromString fully validates).
-  auto in_file = [](char c) { return c >= 'a' && c < ('a' + kBoardSize); };
-  auto in_rank = [](char c) { return c >= '1' && c < ('1' + kBoardSize); };
+  auto in_file = [](char c) { return c >= '1' && c < ('1' + kBoardSize); };
+  auto in_rank = [](char c) { return c >= 'a' && c < ('a' + kBoardSize); };
 
   if (!in_file(move[0]) || !in_rank(move[1]) || !in_file(move[2]) || !in_rank(move[3])) {
     return absl::nullopt;
@@ -722,7 +715,7 @@ void ShogiBoard::ApplyMove(const Move& move) {
   if (destination_piece != kEmptyPiece) {
     PieceType dpt = destination_piece.type;
     if (dpt == PieceType::kKing) {
-      std::cerr << "King capture from" << SquareToString(move.from)
+      std::cerr << "King capture from" << move.from.ToString()
                 << std::endl;
       SpielFatalError("King capture detected.");
     }
@@ -931,9 +924,9 @@ void ShogiBoard::GenerateLanceDestinations_(
     Square sq, Color color,
     const YieldFn& yield) const {
 	if (color == Color::kBlack) {
-    GenerateRayDestinations_(sq, color, {0, -1}, yield);
-	} else {
     GenerateRayDestinations_(sq, color, {0, 1}, yield);
+	} else {
+    GenerateRayDestinations_(sq, color, {0, -1}, yield);
 	}
 }
 
@@ -941,7 +934,7 @@ template <typename YieldFn>
 void ShogiBoard::GenerateGoldDestinations_(
     Square sq, Color color,
     const YieldFn& yield) const {
-	int8_t y_direction = color == Color::kBlack ? -1 : 1;
+  int8_t y_direction = Forward(color);
 	static const std::array<Offset, 6> kGoldOffsets =
 	 {Offset{0,  1}, Offset{0, -1}, Offset{1,  0},
 		 Offset{-1, 0}, Offset{1,  1},Offset{-1, 1}};
@@ -959,7 +952,7 @@ template <typename YieldFn>
 void ShogiBoard::GenerateSilverDestinations_(
     Square sq, Color color,
     const YieldFn& yield) const {
-  int8_t y_direction = color == Color::kBlack ? -1 : 1;
+  int8_t y_direction = Forward(color);
   static const std::array<Offset, 5> kSilverOffsets =
    {Offset{1,  -1}, Offset{1, 0}, Offset{1,  1},
 		 Offset{-1, -1}, Offset{-1, 1}};
@@ -977,7 +970,7 @@ template <typename YieldFn>
 void ShogiBoard::GenerateKnightDestinations_(
     Square sq, Color color,
     const YieldFn& yield) const {
-  int8_t y_direction = color == Color::kBlack ? -1 : 1;
+  int8_t y_direction = Forward(color);
   static const std::array<Offset, 2> kKnightOffsets =
    {Offset{-1,  2}, Offset{1, 2}};
   for (const auto& offset : kKnightOffsets) {
@@ -994,7 +987,7 @@ template <typename YieldFn>
 void ShogiBoard::GeneratePawnDestinations_(
     Square sq, Color color,
     const YieldFn& yield) const {
-  int8_t y_direction = color == Color::kBlack ? -1 : 1;
+  int8_t y_direction = Forward(color);
   static const std::array<Offset, 1> kPawnOffsets =
    {{0,  1}};
   for (const auto& offset : kPawnOffsets) {

@@ -13,31 +13,60 @@
 # limitations under the License.
 
 """Tests for the game-specific functions for shogi."""
-
+import sys
 from absl import flags
 from absl.testing import absltest
 from absl.testing import parameterized
 
+import numpy as np
 import pyspiel
 shogi = pyspiel.shogi
 
+def apply_legal(state, move):
+    action = state.parse_move_to_action(move)
+    if action in state.legal_actions():
+        state.apply_action(action)
+    else:
+        raise ValueError()
+
 class GamesShogiTest(parameterized.TestCase):
-    def test_bindings_sim(self):
-      game = pyspiel.load_game("shogi")
-      state = game.new_initial_state()
+  def test_bindings_sim(self):
+    game = pyspiel.load_game("shogi")
+    state = game.new_initial_state()
+    board = None
+    count = 0
+
+    while count < 200 and not state.is_terminal():
+      # print(state)
+      count += 1
+      legal_actions = state.legal_actions()
       board = state.board()
-      for action in state.legal_actions():
-          print(shogi.action_to_move(action, board).to_string())
-      return
+      for action in legal_actions:
+        move = shogi.action_to_move(action, board)
+        # print("move", move.to_string())
+        sys.stdout.flush()
+        # Now do the reverse mapping from both string representations to check
+        # that they correspond to this action.
+        #print(move.to_string())
+        action_from_move = state.parse_move_to_action(move.to_string())
+        self.assertEqual(action, action_from_move)
+      action = np.random.choice(legal_actions)
+      state.apply_action(action)
+    #print(board.to_unicode_string())
+    #print(board.debug_string())
+    print("Moves history:")
+    print(" ".join([move.to_string() for move in state.moves_history()]))
+    if count < 200:
+      self.assertTrue(state.is_terminal())
+    print("terminal?", state.is_terminal())
 
-    def lolNope(self):
-
-      state.apply_action(state.parse_move_to_action("g3g4"))
-      state.apply_action(state.parse_move_to_action("c7c6"))
-      for action in state.legal_actions():
-          print(shogi.action_to_move(action, board).to_string())
-      #state.apply_action(state.parse_move_to_action("h8b2"))
-      print(state)
+  def dont_test_kma(self):
+    game = pyspiel.load_game("shogi")
+    state = game.new_initial_state()
+    board = state.board()
+    for action in state.legal_actions():
+       move = shogi.action_to_move(action, board)
+       print(move.to_string())
 
 
 

@@ -43,6 +43,32 @@ struct Offset {
   }
 };
 
+// Shogi coordinates are twisted and backwards from chess:
+// files (columns)  are numbers with 9 on the left
+// ranks (rows) ar letters ith 'i' at the bottom
+// black (first player, sente) is going 'up'
+// The number (column) is written first.
+
+inline absl::optional<int8_t> ParseRank(char c) {
+  if (c >= 'a' && c <= 'i') return 'i' - c;
+  return absl::nullopt;
+}
+
+inline absl::optional<int8_t> ParseFile(char c) {
+  if (c >= '1' && c <= '9') return '9' - c;
+  return absl::nullopt;
+}
+
+// Maps y = [0, 8] to rank ["1", "9"].
+inline std::string RankToString(int8_t rank) {
+  return std::string(1, 'i' - rank);
+}
+
+// Maps x = [0, 8] to file ["a", "i"].
+inline std::string FileToString(int8_t file) {
+  return std::string(1, '9' - file);
+}
+
 // x corresponds to file (column / letter)
 // y corresponds to rank (row / number).
 struct Square {
@@ -68,10 +94,7 @@ struct Square {
   }
 
   std::string ToString() const {
-    std::string s;
-    s.push_back('a' + x);
-    s.push_back('1' + y);
-    return s;
+    return FileToString(x) + RankToString(y);
   }
 
   int Index() const {
@@ -83,17 +106,6 @@ struct Square {
 };
 constexpr Square kInvalidSquare{-1, -1};
 
-inline std::string SquareToString(const Square& square) {
-  if (square == kInvalidSquare) {
-    return "None";
-  } else {
-    std::string s;
-    s.push_back('a' + square.x);
-    s.push_back('1' + square.y);
-    return s;
-  }
-}
-
 inline Square operator+(const Square& sq, const Offset& offset) {
   int8_t x = sq.x + offset.x_offset;
   int8_t y = sq.y + offset.y_offset;
@@ -101,8 +113,11 @@ inline Square operator+(const Square& sq, const Offset& offset) {
 }
 
 inline std::ostream& operator<<(std::ostream& stream, const Square& sq) {
-  return stream << SquareToString(sq);
+  return stream << sq.ToString();
 }
+
+absl::optional<Square> SquareFromString(const std::string& s);
+
 
 template <typename T, std::size_t InnerDim, std::size_t... OtherDims>
 class ZobristTable {
@@ -153,6 +168,8 @@ using ZobristTableU64 = ZobristTable<uint64_t, Dims...>;
 enum class Color : int8_t { kBlack = 0, kWhite = 1, kEmpty = 2 };
 
 inline int ToInt(Color color) { return color == Color::kWhite ? 1 : 0; }
+
+inline int8_t Forward(Color color) { return color == Color::kBlack ? 1 : -1; }
 
 inline Color OppColor(Color color) {
   return color == Color::kWhite ? Color::kBlack : Color::kWhite;
@@ -220,36 +237,11 @@ inline std::ostream& operator<<(std::ostream& stream, const Piece& p) {
   return stream << p.ToString();
 }
 
-// Shoigi coordinates are twisted and backwards from chess:
-// files (columns)  are numbers with 9 on the left
-// ranks (rows) ar letters ith 'i' at the bottom
-// black (first player, sente) is going 'up' but the y values decrease)
-
-inline absl::optional<int8_t> ParseRank(char c) {
-  if (c >= 'a' && c <= 'i') return 'i' - c;
-  return absl::nullopt;
-}
-
-inline absl::optional<int8_t> ParseFile(char c) {
-  if (c >= '1' && c <= '9') return '9' - c;
-  return absl::nullopt;
-}
-
-// Maps y = [0, 8] to rank ["1", "9"].
-inline std::string RankToString(int8_t rank) {
-  return std::string(1, 'i' - rank);
-}
-
-// Maps x = [0, 8] to file ["a", "i"].
-inline std::string FileToString(int8_t file) {
-  return std::string(1, '9' - file);
-}
 
 // Offsets for all possible knight moves.
 inline constexpr std::array<Offset, 8> kKnightOffsets = {
     {{-2, -1}, {-2, 1}, {2, -1}, {2, 1}}};
 
-absl::optional<Square> SquareFromString(const std::string& s);
 
 
 struct Move {
