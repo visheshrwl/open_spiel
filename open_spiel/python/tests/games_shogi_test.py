@@ -51,7 +51,12 @@ class GamesShogiTest(parameterized.TestCase):
         action_from_move = state.parse_move_to_action(move.to_string())
         self.assertEqual(action, action_from_move)
       action = np.random.choice(legal_actions)
+      board = state.board()
+      move = shogi.action_to_move(action, board)
+      print(move.to_string())
       state.apply_action(action)
+      print(state)
+
     #print(board.to_unicode_string())
     #print(board.debug_string())
     print("Moves history:")
@@ -60,7 +65,7 @@ class GamesShogiTest(parameterized.TestCase):
       self.assertTrue(state.is_terminal())
     print("terminal?", state.is_terminal())
 
-  def dont_test_kma(self):
+  def dtest_kma(self):
     game = pyspiel.load_game("shogi")
     state = game.new_initial_state()
     board = state.board()

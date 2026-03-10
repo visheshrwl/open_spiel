@@ -489,7 +489,6 @@ void ShogiBoard::GeneratePseudoLegalMoves(
                 [&yield, &sq, &piece, &generating](const Square& to) {
                   YIELD(Move(sq, to, piece));
                 });
-            break;
             GenerateBishopPDestinations_(
                 sq, color,
                 [&yield, &sq, &piece, &generating](const Square& to) {
@@ -710,6 +709,10 @@ void ShogiBoard::ApplyMove(const Move& move) {
     set_square(move.from, kEmptyPiece);
   }
 
+	if (move.promote){
+		moving_piece.type = PromotedType(moving_piece.type);
+	}
+
   set_square(move.to, moving_piece);
   // Increment pockets for capture.
   if (destination_piece != kEmptyPiece) {
@@ -799,7 +802,7 @@ bool ShogiBoard::UnderAttack(const Square& sq, Color our_color) const {
   GenerateBishopPDestinations_(
       sq, our_color,
       [this, &under_attack, &opponent_color](const Square& to) {
-        if (at(to) == Piece{opponent_color, PieceType::kBishop}) {
+        if (at(to) == Piece{opponent_color, PieceType::kBishopP}) {
           under_attack = true;
         }
       });
@@ -936,8 +939,8 @@ void ShogiBoard::GenerateGoldDestinations_(
     const YieldFn& yield) const {
   int8_t y_direction = Forward(color);
 	static const std::array<Offset, 6> kGoldOffsets =
-	 {Offset{0,  1}, Offset{0, -1}, Offset{1,  0},
-		 Offset{-1, 0}, Offset{1,  1},Offset{-1, 1}};
+	 {Offset{-1,  1}, Offset{0, 1}, Offset{1,  1},
+		 Offset{-1, 0}, Offset{-1,  0},Offset{1, 0}};
   for (const auto& offset : kGoldOffsets) {
 		Offset real_offset = Offset{offset.x_offset,
 			static_cast<int8_t>(y_direction * offset.y_offset)}; 
@@ -954,8 +957,8 @@ void ShogiBoard::GenerateSilverDestinations_(
     const YieldFn& yield) const {
   int8_t y_direction = Forward(color);
   static const std::array<Offset, 5> kSilverOffsets =
-   {Offset{1,  -1}, Offset{1, 0}, Offset{1,  1},
-		 Offset{-1, -1}, Offset{-1, 1}};
+   {Offset{-1,  1}, Offset{0, 1}, Offset{1,  1},
+		 Offset{-1, -1}, Offset{-1, -1}};
   for (const auto& offset : kSilverOffsets) {
     Offset real_offset = Offset{offset.x_offset,
 			static_cast<int8_t>(y_direction * offset.y_offset)};
@@ -1021,7 +1024,7 @@ void ShogiBoard::GenerateBishopPDestinations_(
     Square sq, Color color,
     const YieldFn& yield) const {
   static const std::array<Offset, 4> kBishopPOffsets =
-   {Offset{-1,  -1}, Offset{-1, 1}, Offset{1, -1}, Offset{1,1}};
+   {Offset{0,  -1}, Offset{0, 1}, Offset{-1, 0}, Offset{1,0}};
   for (const auto& offset : kBishopPOffsets) {
     Square dest = sq + offset;
     if (InBoardArea(dest) && IsEmptyOrEnemy(dest, color)) {
@@ -1128,6 +1131,9 @@ inline int HashCount(int n) { return std::min(n, kMaxPocketHashCount); }
 
 void ShogiBoard::AddToPocket(Color owner, PieceType piece) {
   Pocket& pocket = owner == Color::kWhite ? white_pocket_ : black_pocket_;
+	if (UnpromotedType(piece) != PieceType::kEmpty) {
+		piece = UnpromotedType(piece);
+	}
 
 	int old = pocket.Count(piece);
 	int new_ = old + 1;
