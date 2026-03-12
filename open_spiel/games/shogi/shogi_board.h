@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -33,6 +34,8 @@ constexpr int kBoardSize = 9;
 constexpr int kNumSquares = 81;
 constexpr int kNumBoardMoves = 81 * 81 * 2;
 constexpr int kNumDropMoves  = 7 * 81;
+constexpr int kNumPieceTypes = 14;  // not counting kempty
+constexpr int kNumPocketPieces = 7;
 
 struct Offset {
   int8_t x_offset;
@@ -72,11 +75,14 @@ inline std::string FileToString(int8_t file) {
 // x corresponds to file (column / letter)
 // y corresponds to rank (row / number).
 struct Square {
-  Square& operator+=(const Offset& offset) {
-    x += offset.x_offset;
-    y += offset.y_offset;
-    return *this;
-  }
+  int8_t x;
+  int8_t y;
+
+	Square& operator+=(const Offset& offset) {
+		x = static_cast<int8_t>(x + offset.x_offset);
+		y = static_cast<int8_t>(y + offset.y_offset);
+		return *this;
+	}
 
   bool operator==(const Square& other) const {
     return x == other.x && y == other.y;
@@ -98,19 +104,18 @@ struct Square {
   }
 
   int Index() const {
-    return y * kBoardSize + x;
-  }
+     return y * kBoardSize + x;
+   }
 
-  int8_t x;
-  int8_t y;
 };
-constexpr Square kInvalidSquare{-1, -1};
 
 inline Square operator+(const Square& sq, const Offset& offset) {
   int8_t x = sq.x + offset.x_offset;
   int8_t y = sq.y + offset.y_offset;
   return Square{x, y};
 }
+
+constexpr Square kInvalidSquare{-1, -1};
 
 inline std::ostream& operator<<(std::ostream& stream, const Square& sq) {
   return stream << sq.ToString();
@@ -199,12 +204,12 @@ enum class PieceType : int8_t {
 	kRookP = 14
 };
 
-static inline constexpr std::array<PieceType, 13> kPieceTypes = {
+static inline constexpr std::array<PieceType, kNumPieceTypes> kPieceTypes = {
     {PieceType::kKing, PieceType::kLance, PieceType::kKnight,
 		PieceType::kSilver, PieceType::kGold, PieceType::kPawn,
 		PieceType::kBishop, PieceType::kRook,  PieceType::kLanceP,
-		PieceType::kKnightP, PieceType::kPawnP, PieceType::kBishopP,
-		PieceType::kRookP}};
+		PieceType::kKnightP, PieceType::kSilverP, PieceType::kPawnP, 
+		PieceType::kBishopP, PieceType::kRookP}};
 
 PieceType PromotedType(PieceType type);
 PieceType UnpromotedType(PieceType type);
@@ -291,7 +296,6 @@ using ObservationTable = std::array<bool, kNumSquares>;
 class Pocket {
  public:
   // Iteration support
-  static constexpr std::size_t kNumPocketPieces = 7;
   static constexpr std::array<PieceType, kNumPocketPieces> PieceTypes() {
     return {PieceType::kPawn, PieceType::kLance, PieceType::kKnight,
 			      PieceType::kSilver, PieceType::kGold, PieceType::kBishop,
@@ -326,7 +330,7 @@ class ShogiBoard {
       const std::string& fen
   );
 
-  const Piece& at(Square sq) const { return board_[SquareToIndex_(sq)]; }
+	const Piece& at(Square sq) const { return board_[SquareToIndex_(sq)]; }
 
   void set_square(Square sq, Piece p);
 
@@ -433,9 +437,6 @@ class ShogiBoard {
     return UnderAttack(find(Piece{to_play_, PieceType::kKing}), to_play_);
   }
 
-  bool KingInCheckAllowed() const { return king_in_check_allowed_; }
-
-  bool AllowPassMove() const { return allow_pass_move_; }
 
   uint64_t HashValue() const { return zobrist_hash_; }
 
@@ -452,7 +453,7 @@ class ShogiBoard {
 	int CheckCount(Color player) const { return check_count_[static_cast<int>(player)]; }
 
  private:
-  size_t SquareToIndex_(Square sq) const { return sq.y * kBoardSize + sq.x; }
+  size_t SquareToIndex_(const Square& sq) const { return sq.y * kBoardSize + sq.x; }
 
   /* Generate*Destinations functions call yield(sq) for every potential
    * destination generated.
@@ -527,9 +528,6 @@ class ShogiBoard {
                                  const YieldFn& yield) const;
 
   void SetMovenumber(int move_number);
-
-  bool king_in_check_allowed_;
-  bool allow_pass_move_;
 
   std::array<Piece, kNumSquares> board_;
   Color to_play_;

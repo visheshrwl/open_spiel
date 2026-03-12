@@ -56,9 +56,9 @@ inline constexpr int MaxGameLength() { return 17695; }
 
 inline const std::vector<int>& ObservationTensorShape() {
   static std::vector<int> shape{
-      21 /* piece types * colours + empty */ + 1 /* repetition count */ +
-          1 /* side to move */ + 1 /* irreversible move counter */ +
-           + 10 /* pockets */,
+      2 * kNumPieceTypes + 1 /* empty */ + 1 /* repetition count */
+      + 1 /* side to move */ 
+      + 2 * kNumPocketPieces /* pockets */,
       kBoardSize, kBoardSize};
   return shape;
 }

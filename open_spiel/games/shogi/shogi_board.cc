@@ -343,30 +343,26 @@ Square ShogiBoard::find(const Piece& piece) const {
 void ShogiBoard::GenerateLegalMoves(const MoveYieldFn& yield,
                                          Color color) const {
 	// Do not allow king in check
-  if (false) {
-    GeneratePseudoLegalMoves(yield, color);
-  } else {
-    auto king_square = find(Piece{color, PieceType::kKing});
+  auto king_square = find(Piece{color, PieceType::kKing});
 
-    GeneratePseudoLegalMoves(
-        [this, &king_square, &yield, color](const Move& move) {
-          // See if the move is legal by applying, checking whether the king is
-          // under attack, and undoing the move.
-          auto board_copy = *this;
-          board_copy.ApplyMove(move);
+	GeneratePseudoLegalMoves(
+			[this, &king_square, &yield, color](const Move& move) {
+				// See if the move is legal by applying, checking whether the king is
+				// under attack, and undoing the move.
+				auto board_copy = *this;
+				board_copy.ApplyMove(move);
 
-          auto ks = king_square;
-          if (!(move.IsDropMove()) && at(move.from).type == PieceType::kKing) {
-            ks = move.to;
-          }
-          if (board_copy.UnderAttack(ks, color)) {
-            return true;
-          } else {
-            return yield(move);
-          }
-        },
-        color);
-  }
+				auto ks = king_square;
+				if (!(move.IsDropMove()) && at(move.from).type == PieceType::kKing) {
+					ks = move.to;
+				}
+				if (board_copy.UnderAttack(ks, color)) {
+					return true;
+				} else {
+					return yield(move);
+				}
+			},
+			color);
 }
 
 
@@ -770,7 +766,8 @@ bool ShogiBoard::UnderAttack(const Square& sq, Color our_color) const {
   GenerateRookDestinations_(
       sq, our_color,
       [this, &under_attack, &opponent_color](const Square& to) {
-        if (at(to) == Piece{opponent_color, PieceType::kRook}) {
+        if ((at(to) == Piece{opponent_color, PieceType::kRook}) ||
+          (at(to) == Piece{opponent_color, PieceType::kRookP})) {
           under_attack = true;
         }
       });
@@ -792,13 +789,15 @@ bool ShogiBoard::UnderAttack(const Square& sq, Color our_color) const {
   GenerateBishopDestinations_(
       sq, our_color,
       [this, &under_attack, &opponent_color](const Square& to) {
-        if (at(to) == Piece{opponent_color, PieceType::kBishop}) {
+        if ((at(to) == Piece{opponent_color, PieceType::kBishop})
+           || (at(to) == Piece{opponent_color, PieceType::kBishopP})) {
           under_attack = true;
         }
       });
   if (under_attack) {
     return true;
   }
+	// This is only the "extra" squares for promoted bishop
   GenerateBishopPDestinations_(
       sq, our_color,
       [this, &under_attack, &opponent_color](const Square& to) {
@@ -940,7 +939,7 @@ void ShogiBoard::GenerateGoldDestinations_(
   int8_t y_direction = Forward(color);
 	static const std::array<Offset, 6> kGoldOffsets =
 	 {Offset{-1,  1}, Offset{0, 1}, Offset{1,  1},
-		 Offset{-1, 0}, Offset{-1,  0},Offset{1, 0}};
+		 Offset{-1, 0}, Offset{1,  0},Offset{0, -1}};
   for (const auto& offset : kGoldOffsets) {
 		Offset real_offset = Offset{offset.x_offset,
 			static_cast<int8_t>(y_direction * offset.y_offset)}; 
@@ -1171,6 +1170,11 @@ void ShogiBoard::RemoveFromPocket(Color owner, PieceType piece) {
 
 // 13 piece types * 2 colors + 1 for empty = 27
 void ShogiBoard::set_square(Square sq, Piece piece) {
+  SPIEL_CHECK_GE(sq.x, 0);
+  SPIEL_CHECK_GE(sq.y, 0);
+  SPIEL_CHECK_LT(sq.x, kBoardSize);
+  SPIEL_CHECK_LT(sq.y, kBoardSize);
+
   static const ZobristTableU64<kNumSquares, 3, 27> kZobristValues(
       /*seed=*/2765481);
 
