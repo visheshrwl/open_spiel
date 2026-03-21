@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "open_spiel/games/shogi/shogi.h"
-
 #include <sys/types.h>
 
 #include <algorithm>
@@ -61,7 +59,7 @@ const GameType kGameType {
     /*provides_observation_string=*/true,
     /*provides_observation_tensor=*/true,
     /*parameter_specification=*/
-    {{}}};
+{{}}};
 
 std::shared_ptr<const Game> Factory(const GameParameters& params) {
   return std::shared_ptr<const Game>(new ShogiGame(params));
@@ -105,8 +103,8 @@ ShogiState::ShogiState(std::shared_ptr<const Game> game)
     : State(game) {
   const auto* g = ParentGame();
   auto maybe_board = ShogiBoard::BoardFromSFEN(kDefaultStandardSFEN);
-	SPIEL_CHECK_TRUE(maybe_board.has_value());
-	start_board_ = *maybe_board;
+  SPIEL_CHECK_TRUE(maybe_board.has_value());
+  start_board_ = *maybe_board;
   current_board_ = start_board_;
   repetitions_[current_board_.HashValue()] = 1;
 }
@@ -137,12 +135,11 @@ Action ShogiState::ParseMoveToAction(const std::string& move_str) const {
 }
 
 void ShogiState::DoApplyAction(Action action) {
-
   Move move = ActionToMove(action, Board());
   moves_history_.push_back(move);
-	auto next_to_play = ColorToPlayer(Board().ToPlay());
+  auto next_to_play = ColorToPlayer(Board().ToPlay());
   Board().ApplyMove(move);
-	if (InCheck()) {
+  if (InCheck()) {
     check_count_[static_cast<int>(next_to_play)] += 1;
   } else {
     check_count_[static_cast<int>(next_to_play)] = 0;
@@ -185,44 +182,44 @@ Color PlayerToColor(Player p) {
 }
 
 Action MoveToAction(const Move& move) {
-	if (move.drop){
-		int piece_index = Pocket::Index(move.piece.type);
-		int action_int =  kNumBoardMoves + piece_index * kNumSquares
-			+ move.to.Index();
-		return static_cast<Action>(action_int);
-	}
-	int promo = move.promote ? 1 : 0;
-	int action_int = (move.from.Index() * kNumSquares + move.to.Index()) * 2
-		+ promo;
-	return static_cast<Action>(action_int);
+  if (move.drop) {
+    int piece_index = Pocket::Index(move.piece.type);
+    int action_int =  kNumBoardMoves + piece_index * kNumSquares
+      + move.to.Index();
+    return static_cast<Action>(action_int);
+  }
+  int promo = move.promote ? 1 : 0;
+  int action_int = (move.from.Index() * kNumSquares + move.to.Index()) * 2
+    + promo;
+  return static_cast<Action>(action_int);
 }
 
 Move ActionToMove(Action action, const ShogiBoard& board) {
-	if (action < kNumBoardMoves) {
-		bool promo = (action % 2 == 1);
-		action /= 2;
-		int to = action % kNumSquares;
-		Square to_square = Square{
-			static_cast<int8_t>(to % kBoardSize),
-			static_cast<int8_t>(to / kBoardSize)};
-		int from = action / kNumSquares;
-		Square from_square = Square{static_cast<int8_t>(from % kBoardSize),
-			static_cast<int8_t>(from / kBoardSize)};
-		Piece piece = {board.ToPlay(), board.at(from_square).type};
-		SPIEL_CHECK_NE(board.at(from_square).type, PieceType::kEmpty);
-		return Move(from_square, to_square, piece, promo);
-	} else {
-		action -= kNumBoardMoves;
-		Square from_square = Square{-1, -1}; // dummy value for drops
+  if (action < kNumBoardMoves) {
+    bool promo = (action % 2 == 1);
+    action /= 2;
+    int to = action % kNumSquares;
+    Square to_square = Square{
+      static_cast<int8_t>(to % kBoardSize),
+      static_cast<int8_t>(to / kBoardSize)};
+    int from = action / kNumSquares;
+    Square from_square = Square{static_cast<int8_t>(from % kBoardSize),
+      static_cast<int8_t>(from / kBoardSize)};
+    Piece piece = {board.ToPlay(), board.at(from_square).type};
+    SPIEL_CHECK_NE(board.at(from_square).type, PieceType::kEmpty);
+    return Move(from_square, to_square, piece, promo);
+  } else {
+    action -= kNumBoardMoves;
+    Square from_square = Square{-1, -1};  // dummy value for drops
 
-		int to = action % kNumSquares;
-		int piece_index = action / kNumSquares;
-		Square to_square = Square{static_cast<int8_t>(to % kBoardSize),
-			static_cast<int8_t>(to / kBoardSize)};
-		PieceType ptype = Pocket::PocketPieceType(piece_index);
-		Piece piece = {board.ToPlay(), ptype};
-		return Move(from_square, to_square, piece, false, true);
-	}
+    int to = action % kNumSquares;
+    int piece_index = action / kNumSquares;
+    Square to_square = Square{static_cast<int8_t>(to % kBoardSize),
+      static_cast<int8_t>(to / kBoardSize)};
+    PieceType ptype = Pocket::PocketPieceType(piece_index);
+    Piece piece = {board.ToPlay(), ptype};
+    return Move(from_square, to_square, piece, false, true);
+  }
 }
 
 std::string ShogiState::ActionToString(Player player,
@@ -350,19 +347,19 @@ ShogiState::ExtractSFenAndMaybeMoves() const {
 }
 
 absl::optional<std::vector<double>> ShogiState::MaybeFinalReturns() const {
-
   if (IsRepetitionEnd()) {
-		// Perpetual check repetion could occur either with a player giving check again
-		// or with the other player escaping to the same position. Either way checking player loses.
-		if ((check_count_[0] >= 6) || (check_count_[1] >= 6)) {
-			if (check_count_[0] >= 6) {
-				 	return std::vector<double>{LossUtility(), WinUtility()};
-			} else {
-				 	return std::vector<double>{WinUtility(), LossUtility()};
-			}
-		} else {
+    // Perpetual check repetion could occur either with a player giving
+    // check again or with the other player escaping to the same position.
+    // Either way checking player loses.
+    if ((check_count_[0] >= 6) || (check_count_[1] >= 6)) {
+      if (check_count_[0] >= 6) {
+           return std::vector<double>{LossUtility(), WinUtility()};
+      } else {
+           return std::vector<double>{WinUtility(), LossUtility()};
+      }
+    } else {
         return std::vector<double>{DrawUtility(), DrawUtility()};
-		}
+    }
   }
   // Compute and cache the legal actions.
   MaybeGenerateLegalActions();
@@ -371,24 +368,24 @@ absl::optional<std::vector<double>> ShogiState::MaybeFinalReturns() const {
 
   // No stalemate in shogi. Player with no legal moves loses.
   if (!have_legal_moves) {
-		std::vector<double> returns(NumPlayers());
-		auto next_to_play = ColorToPlayer(Board().ToPlay());
-		returns[next_to_play] = LossUtility();
-		returns[OtherPlayer(next_to_play)] = WinUtility();
-		return returns;
+    std::vector<double> returns(NumPlayers());
+    auto next_to_play = ColorToPlayer(Board().ToPlay());
+    returns[next_to_play] = LossUtility();
+    returns[OtherPlayer(next_to_play)] = WinUtility();
+    return returns;
   }
   // check for entering king win
-	Color on_move = Board().ToPlay();
-	Color just_moved = OppColor(Board().ToPlay());
-	if (Board().KingInEnemyCamp(just_moved) && MaterialPoints(just_moved) >= 28) {
+  Color on_move = Board().ToPlay();
+  Color just_moved = OppColor(Board().ToPlay());
+  if (Board().KingInEnemyCamp(just_moved) && MaterialPoints(just_moved) >= 28) {
      std::vector<double> returns(NumPlayers());
      returns[ColorToPlayer(just_moved)] = WinUtility();
      returns[ColorToPlayer(on_move)] = LossUtility();
      return returns;
-	}
-	if (Board().KingInEnemyCamp(just_moved) && Board().KingInEnemyCamp(on_move)){
+  }
+  if (Board().KingInEnemyCamp(just_moved) && Board().KingInEnemyCamp(on_move)) {
       return std::vector<double>{DrawUtility(), DrawUtility()};
-	}
+  }
   return absl::nullopt;
 }
 
@@ -408,7 +405,7 @@ std::string ShogiState::StartSFEN() const {
 }
 
 int ShogiState::MaterialPoints(Color player) const {
-		return current_board_.MaterialPoints(player);
+    return current_board_.MaterialPoints(player);
 }
 
 ShogiGame::ShogiGame(const GameParameters& params)

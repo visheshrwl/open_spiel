@@ -32,8 +32,8 @@
 #include "open_spiel/spiel.h"
 #include "open_spiel/spiel_utils.h"
 
-// An implementation of Crazyhouse chess variant:
-// https://en.wikipedia.org/wiki/Crazyhouse
+// An implementation of shogi
+// https://en.wikipedia.org/wiki/Shogi
 //
 //
 
@@ -48,7 +48,7 @@ inline constexpr double DrawUtility() { return 0; }
 inline constexpr double WinUtility() { return 1; }
 
 inline constexpr int NumDistinctActions() {
-	return kNumBoardMoves + kNumPocketPieces * kNumSquares; 
+  return kNumBoardMoves + kNumPocketPieces * kNumSquares;
 }
 
 // Keep the same value as for chess, nobody cares
@@ -57,7 +57,7 @@ inline constexpr int MaxGameLength() { return 17695; }
 inline const std::vector<int>& ObservationTensorShape() {
   static std::vector<int> shape{
       2 * kNumPieceTypes + 1 /* empty */ + 1 /* repetition count */
-      + 1 /* side to move */ 
+      + 1 /* side to move */
       + 2 * kNumPocketPieces /* pockets */,
       kBoardSize, kBoardSize};
   return shape;
@@ -75,7 +75,7 @@ inline int ColorToPlayer(Color c) {
   }
 }
 
-inline int OtherPlayer(Player player) { return player == Player{0} ? 1 : 0; }
+inline int OtherPlayer(Player player) { return player == Player {0} ? 1 : 0; }
 
 // Returns index (0 ... kNumSquares - 1) of a square
 // ({0, 0} ... {kBoardSize-1, kBoardSize-1}).
@@ -109,11 +109,12 @@ Move ActionToMove(Action action, const ShogiBoard& board);
 // State of an in-play game.
 class ShogiState : public State {
  public:
-  // Constructs a chess state at the standard start position.
+  // Constructs a shogi state at the standard start position.
   explicit ShogiState(std::shared_ptr<const Game> game);
 
-  // Constructs a chess state at the given position in Forsyth-Edwards Notation.
-  // https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
+  // Constructs a shogi state at the given position in SFEN Notation.
+  // SFEN is similar to FEN for chess but supports pocket pieces and
+  // promoted pieces.
   ShogiState(std::shared_ptr<const Game> game, const std::string& sfen);
   ShogiState(const ShogiState&) = default;
 
@@ -158,14 +159,15 @@ class ShogiState : public State {
   std::string Serialize() const override;
 
   // Shogi ends the game at the 4th position of a position.
-  // If the repetetion was a result of perpetual check, the checking player loses.
+  // If the repetetion was a result of perpetual check,
+  // the checking player loses.
   bool IsRepetitionEnd() const;
 
   // Returns the number of times the specified state has appeared in the
   // history.
   int NumRepetitions(const ShogiState& state) const;
 
-	int MaterialPoints(Color player) const;
+  int MaterialPoints(Color player) const;
 
   // Get the SFEN for this move and the list of moves in UCI format.
   std::pair<std::string, std::vector<std::string>> ExtractSFenAndMaybeMoves()
@@ -197,11 +199,11 @@ class ShogiState : public State {
   ShogiBoard start_board_;
   // We store the current board position as an optimization.
   ShogiBoard current_board_;
-  // This SFEN string is used only when NewInitialState is called with a specific
-  // initial SFEN.
+  // This SFEN string is used only when NewInitialState is called
+  // with a specific initial SFEN.
   std::string specific_initial_sfen_;
 
-	std::array<int, 2> check_count_ = {0, 0};
+  std::array<int, 2> check_count_ = {0, 0};
 
   // RepetitionTable records how many times the given hash exists in the history
   // stack (including the current board).
@@ -243,7 +245,6 @@ class ShogiGame : public Game {
 
   std::unique_ptr<State> DeserializeState(
       const std::string& str) const override;
-
 };
 
 }  // namespace shogi

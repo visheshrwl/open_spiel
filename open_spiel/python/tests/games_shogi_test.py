@@ -132,9 +132,6 @@ class GamesShogiTest(parameterized.TestCase):
     self.assertEqual(state.returns(), [0.0, 0.0])
 
 
-
-
-
 if __name__ == "__main__":
   absltest.main()
 

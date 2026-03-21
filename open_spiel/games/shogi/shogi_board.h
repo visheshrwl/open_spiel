@@ -23,6 +23,7 @@
 #include <ostream>
 #include <string>
 #include <utility>
+ #include <vector>
 #include "open_spiel/abseil-cpp/absl/random/uniform_int_distribution.h"
 #include "open_spiel/abseil-cpp/absl/types/optional.h"
 #include "open_spiel/spiel_utils.h"
@@ -48,7 +49,7 @@ struct Offset {
 
 // Shogi coordinates are twisted and backwards from chess:
 // files (columns)  are numbers with 9 on the left
-// ranks (rows) ar letters ith 'i' at the bottom
+// ranks (rows) are letters with 'i' at the bottom
 // black (first player, sente) is going 'up'
 // The number (column) is written first.
 
@@ -78,11 +79,11 @@ struct Square {
   int8_t x;
   int8_t y;
 
-	Square& operator+=(const Offset& offset) {
-		x = static_cast<int8_t>(x + offset.x_offset);
-		y = static_cast<int8_t>(y + offset.y_offset);
-		return *this;
-	}
+  Square& operator+=(const Offset& offset) {
+    x = static_cast<int8_t>(x + offset.x_offset);
+    y = static_cast<int8_t>(y + offset.y_offset);
+    return *this;
+  }
 
   bool operator==(const Square& other) const {
     return x == other.x && y == other.y;
@@ -105,8 +106,7 @@ struct Square {
 
   int Index() const {
      return y * kBoardSize + x;
-   }
-
+  }
 };
 
 inline Square operator+(const Square& sq, const Offset& offset) {
@@ -189,27 +189,27 @@ inline std::ostream& operator<<(std::ostream& stream, Color c) {
 enum class PieceType : int8_t {
   kEmpty = 0,
   kKing = 1,
-	kLance = 2,
-	kKnight = 3,
-	kSilver = 4,
-	kGold = 5,
-	kPawn = 6,
-	kBishop = 7,
-	kRook = 8,
-	kLanceP = 9,
-	kKnightP = 10,
-	kSilverP = 11,
-	kPawnP = 12,
-	kBishopP = 13,
-	kRookP = 14
+  kLance = 2,
+  kKnight = 3,
+  kSilver = 4,
+  kGold = 5,
+  kPawn = 6,
+  kBishop = 7,
+  kRook = 8,
+  kLanceP = 9,
+  kKnightP = 10,
+  kSilverP = 11,
+  kPawnP = 12,
+  kBishopP = 13,
+  kRookP = 14
 };
 
 static inline constexpr std::array<PieceType, kNumPieceTypes> kPieceTypes = {
     {PieceType::kKing, PieceType::kLance, PieceType::kKnight,
-		PieceType::kSilver, PieceType::kGold, PieceType::kPawn,
-		PieceType::kBishop, PieceType::kRook,  PieceType::kLanceP,
-		PieceType::kKnightP, PieceType::kSilverP, PieceType::kPawnP, 
-		PieceType::kBishopP, PieceType::kRookP}};
+    PieceType::kSilver, PieceType::kGold, PieceType::kPawn,
+    PieceType::kBishop, PieceType::kRook,  PieceType::kLanceP,
+    PieceType::kKnightP, PieceType::kSilverP, PieceType::kPawnP,
+PieceType::kBishopP, PieceType::kRookP}};
 
 PieceType PromotedType(PieceType type);
 PieceType UnpromotedType(PieceType type);
@@ -238,18 +238,11 @@ struct Piece {
 };
 
 static inline constexpr Piece kEmptyPiece =
-    Piece{Color::kEmpty, PieceType::kEmpty};
+Piece{Color::kEmpty, PieceType::kEmpty};
 
 inline std::ostream& operator<<(std::ostream& stream, const Piece& p) {
   return stream << p.ToString();
 }
-
-
-// Offsets for all possible knight moves.
-inline constexpr std::array<Offset, 8> kKnightOffsets = {
-    {{-2, -1}, {-2, 1}, {2, -1}, {2, 1}}};
-
-
 
 struct Move {
   Square from;
@@ -258,7 +251,7 @@ struct Move {
   bool promote = false;
   bool drop = false;
 
-	Move() {};
+  Move() {}
 
   Move(const Square& from, const Square& to, const Piece& piece,
        bool promote = false,
@@ -291,7 +284,7 @@ bool IsMoveCharacter(char c);
 std::pair<std::string, std::string> SplitAnnotations(const std::string& move);
 
 inline const std::string kDefaultStandardSFEN =
-  "lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
+"lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1";
 using ObservationTable = std::array<bool, kNumSquares>;
 
 
@@ -300,9 +293,9 @@ class Pocket {
   // Iteration support
   static constexpr std::array<PieceType, kNumPocketPieces> PieceTypes() {
     return {PieceType::kPawn, PieceType::kLance, PieceType::kKnight,
-			      PieceType::kSilver, PieceType::kGold, PieceType::kBishop,
+            PieceType::kSilver, PieceType::kGold, PieceType::kBishop,
             PieceType::kRook};
-  };
+  }
 
   // Modifiers
   void Increment(PieceType piece);
@@ -316,7 +309,7 @@ class Pocket {
 
   static PieceType PocketPieceType(int index);
 
-	bool Empty() const; 
+  bool Empty() const;
 
  private:
   // Internal storage: Pawn, Lance
@@ -325,14 +318,12 @@ class Pocket {
 
 class ShogiBoard {
  public:
-  // Constructs a chess board at the given position in Forsyth-Edwards Notation.
-  // https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
-	ShogiBoard();
+  // Constructs a shogi board at the given position with the given SFEN.
+  ShogiBoard();
   static absl::optional<ShogiBoard> BoardFromSFEN(
-      const std::string& fen
-  );
+      const std::string& fen);
 
-	const Piece& at(Square sq) const { return board_[SquareToIndex_(sq)]; }
+  const Piece& at(Square sq) const { return board_[SquareToIndex_(sq)]; }
 
   void set_square(Square sq, Piece p);
 
@@ -352,8 +343,8 @@ class ShogiBoard {
   Square find(const Piece& piece) const;
 
   using MoveYieldFn = std::function<bool(const Move&)>;
-	void GeneratePseudoLegalMoves(const MoveYieldFn& yield, Color color,
-			bool skip_drops=false) const;
+  void GeneratePseudoLegalMoves(const MoveYieldFn& yield, Color color,
+      bool skip_drops = false) const;
 
 
 
@@ -369,7 +360,7 @@ class ShogiBoard {
   Pocket white_pocket_;  // counts of pocket pieces by type
   Pocket black_pocket_;
 
-  bool HasLegalMoves(bool skip_drops=false) const {
+  bool HasLegalMoves(bool skip_drops = false) const {
     bool found = false;
     GenerateLegalMoves([&found](const Move&) {
       found = true;
@@ -398,15 +389,12 @@ class ShogiBoard {
   // All drop moves are shown with a drop syntax, so Nd4 always mean a knight
   // on the board moved.
   absl::optional<Move> ParseDropMove(const std::string& move) const;
-  // Parses a move in standard algebraic notation as defined by FIDE.
-  // https://en.wikipedia.org/wiki/Algebraic_notation_(chess).
+  // Parses a move in standard algebraic notation.
+	// Ranks are letters with a at the top and i at te bottom
+	// Files are numbers with 1 at the right.
+	// Drops are signified by a piece letter and a *
   // Returns absl::nullopt on failure.
 
-  // Parses a move in long algebraic notation.
-  // Long algebraic notation is not standardized and there are many variants,
-  // but the one we care about is of the form "e2e4" and "f7f8q". This is the
-  // form used by chess engine text protocols that are of interest to us.
-  // Returns absl::nullopt on failure.
   absl::optional<Move> ParseLANMove(const std::string& move) const;
 
   void ApplyMove(const Move& move);
@@ -447,14 +435,14 @@ class ShogiBoard {
     return UnderAttack(find(Piece{to_play_, PieceType::kKing}), to_play_);
   }
 
-	bool KingInEnemyCamp(Color player) const;
+  bool KingInEnemyCamp(Color player) const;
 
 
   uint64_t HashValue() const { return zobrist_hash_; }
 
   std::string DebugString(bool shredder_fen = false) const;
 
-	int MaterialPoints(Color player) const;
+  int MaterialPoints(Color player) const;
 
   // Constructs a string describing the chess board position in Forsyth-Edwards
   // Notation. https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
@@ -462,7 +450,8 @@ class ShogiBoard {
   std::string ToSFEN() const;
 
  private:
-  size_t SquareToIndex_(const Square& sq) const { return sq.y * kBoardSize + sq.x; }
+  size_t SquareToIndex_(const Square& sq) const
+    { return sq.y * kBoardSize + sq.x; }
 
   /* Generate*Destinations functions call yield(sq) for every potential
    * destination generated.
@@ -542,11 +531,10 @@ class ShogiBoard {
   Color to_play_;
 
   // This starts at 1, and increments after each black move (a "full move" in
-  // chess is a "half move" by white followed by a "half move" by black).
+  // shogi is a "half move" by black followed by a "half move" by white).
   int32_t move_number_;
 
   uint64_t zobrist_hash_;
-
 };
 
 inline std::ostream& operator<<(std::ostream& stream,
