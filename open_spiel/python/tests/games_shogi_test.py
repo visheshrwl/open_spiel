@@ -30,7 +30,7 @@ def apply_legal(state, move):
         raise ValueError()
 
 class GamesShogiTest(parameterized.TestCase):
-  def dtest_bindings_sim(self):
+  def test_bindings_sim(self):
     game = pyspiel.load_game("shogi")
     state = game.new_initial_state()
     board = None
@@ -134,5 +134,3 @@ class GamesShogiTest(parameterized.TestCase):
 
 if __name__ == "__main__":
   absltest.main()
-
-

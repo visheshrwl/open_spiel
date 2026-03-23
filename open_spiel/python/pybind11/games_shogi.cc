@@ -38,7 +38,7 @@ using open_spiel::shogi::PieceType;
 using open_spiel::shogi::Square;
 
 void open_spiel::init_pyspiel_games_shogi(py::module& m) {
-	py::module_ shogi = m.def_submodule("shogi");
+  py::module_ shogi = m.def_submodule("shogi");
 
   py::enum_<Color>(shogi, "Color")
       .value("BLACK", Color::kBlack)
@@ -90,11 +90,11 @@ void open_spiel::init_pyspiel_games_shogi(py::module& m) {
       .def("to_sfen", &ShogiBoard::ToSFEN);
 
   py::classh<ShogiState, State>(m, "ShogiState")
-      .def("board", py::overload_cast<>(&ShogiState::Board))
+      .def("board", [](const ShogiState& s) { return s.Board(); })
       .def("debug_string", &ShogiState::DebugString)
       .def("is_repetition_end", &ShogiState::IsRepetitionEnd)
-      .def("moves_history", py::overload_cast<>(&ShogiState::MovesHistory))
-      // num_repetitions(state: ChogiState) -> int
+      .def("moves_history", [](const ShogiState& s)
+        { return s.MovesHistory(); })
       .def("num_repetitions", &ShogiState::NumRepetitions)
       .def("parse_move_to_action", &ShogiState::ParseMoveToAction)
       .def("start_sfen", &ShogiState::StartSFEN)
@@ -113,14 +113,16 @@ void open_spiel::init_pyspiel_games_shogi(py::module& m) {
 
   py::classh<ShogiGame, Game>(m, "ShogiGame")
       // Pickle support
-      .def(py::pickle(
-          [](std::shared_ptr<const ShogiGame> game) {  // __getstate__
-            return game->ToString();
-          },
-          [](const std::string& data) {  // __setstate__
-            return std::dynamic_pointer_cast<ShogiGame>(
-                std::const_pointer_cast<Game>(LoadGame(data)));
-          }));
+    .def(py::pickle(
+      [](const ShogiState& state) {
+        return SerializeGameAndState(*state.GetGame(), state);
+      },
+      [](const std::string& data) {
+        auto game_and_state = DeserializeGameAndState(data);
+        auto* ptr = dynamic_cast<ShogiState*>(game_and_state.second.release());
+        SPIEL_CHECK_TRUE(ptr != nullptr);
+        return std::unique_ptr<ShogiState>(ptr);
+      }));
 
   shogi.def("action_to_move", &shogi::ActionToMove, py::arg("action"),
                  py::arg("board"));

@@ -59,7 +59,7 @@ const GameType kGameType {
     /*provides_observation_string=*/true,
     /*provides_observation_tensor=*/true,
     /*parameter_specification=*/
-{{}}};
+{}};
 
 std::shared_ptr<const Game> Factory(const GameParameters& params) {
   return std::shared_ptr<const Game>(new ShogiGame(params));

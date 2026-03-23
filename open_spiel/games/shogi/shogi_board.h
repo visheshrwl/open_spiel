@@ -444,7 +444,7 @@ class ShogiBoard {
 
   int MaterialPoints(Color player) const;
 
-  // Constructs a string describing the chess board position in Forsyth-Edwards
+  // Constructs a string describing the shogi board position in Forsyth-Edwards
   // Notation. https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation
   // Modified to support promoted and pocket pieces.
   std::string ToSFEN() const;
