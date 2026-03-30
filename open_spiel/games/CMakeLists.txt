@@ -188,8 +188,8 @@ set(GAME_SOURCES
   repeated_pokerkit/repeated_pokerkit_struct.h
   quoridor/quoridor.cc
   quoridor/quoridor.h
-  # rbc/rbc.cc  # temporarily disabled - requires C++20 designated initializers
-  # rbc/rbc.h
+  rbc/rbc.cc
+  rbc/rbc.h
   sheriff/sheriff.cc
   sheriff/sheriff.h
   skat/skat.cc
