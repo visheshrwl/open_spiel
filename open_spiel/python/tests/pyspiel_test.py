@@ -161,6 +161,7 @@ EXPECTED_MANDATORY_GAMES = frozenset([
     "turn_based_simultaneous_game",
     "twixt",
     "ultimate_tic_tac_toe",
+    "xiangqi",
     "y",
     "yacht",
     "zerosum",
