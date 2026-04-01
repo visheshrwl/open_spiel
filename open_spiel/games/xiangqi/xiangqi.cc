@@ -521,7 +521,7 @@ void XiangqiState::UndoAction(Player player, Action action) {
 }
 
 bool XiangqiState::IsTerminal() const {
-  return outcome_ != kInvalidPlayer;
+  return outcome_ != kInvalidPlayer || move_number_ >= kMaxGameLength;
 }
 
 std::vector<double> XiangqiState::Returns() const {
