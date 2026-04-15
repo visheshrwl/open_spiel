@@ -786,6 +786,13 @@ PYBIND11_MODULE(pyspiel, m) {
         py::arg("specific_initial_state") = nullptr,
         "Run the C++ tests on a game");
 
+  // Returns a tuple of (action, probability)
+  m.def("sample_action",
+        [](const ActionsAndProbs& actions_and_probs, double z) {
+          return open_spiel::SampleAction(actions_and_probs, z);
+        },
+        "Samples an action given a random number z in [0, 1).");
+
   m.def("random_sim_test_with_specific_initial_state",
         testing::RandomSimTestWithSpecificInitialState, py::arg("game"),
         py::arg("num_sims"), py::arg("specific_initial_state"),
