@@ -43,11 +43,11 @@
 #include "open_spiel/python/pybind11/evaluation_elo.h"
 #include "open_spiel/python/pybind11/evaluation_sco.h"
 #include "open_spiel/python/pybind11/game_transforms.h"
-#include "open_spiel/python/pybind11/games_catch.h"
 #include "open_spiel/python/pybind11/games_backgammon.h"
 #include "open_spiel/python/pybind11/games_bargaining.h"
 #include "open_spiel/python/pybind11/games_blackjack.h"
 #include "open_spiel/python/pybind11/games_bridge.h"
+#include "open_spiel/python/pybind11/games_catch.h"
 #include "open_spiel/python/pybind11/games_chess.h"
 #include "open_spiel/python/pybind11/games_colored_trails.h"
 #include "open_spiel/python/pybind11/games_connect_four.h"
@@ -64,6 +64,7 @@
 #include "open_spiel/python/pybind11/games_negotiation.h"
 #include "open_spiel/python/pybind11/games_pokerkit_wrapper.h"
 #include "open_spiel/python/pybind11/games_repeated_pokerkit.h"
+#include "open_spiel/python/pybind11/games_shogi.h"
 #include "open_spiel/python/pybind11/games_spades.h"
 #include "open_spiel/python/pybind11/games_tarok.h"
 #include "open_spiel/python/pybind11/games_tic_tac_toe.h"
@@ -77,9 +78,9 @@
 #include "open_spiel/spiel.h"
 #include "open_spiel/spiel_globals.h"
 #include "open_spiel/spiel_utils.h"
-#include "open_spiel/utils/status.h"
 #include "open_spiel/tensor_game.h"
 #include "open_spiel/tests/basic_tests.h"
+#include "open_spiel/utils/status.h"
 
 // Includes needed for absl::optional.
 #include "pybind11/include/pybind11/detail/common.h"
@@ -847,6 +848,7 @@ PYBIND11_MODULE(pyspiel, m) {
   init_pyspiel_games_kuhn_poker(m);
   init_pyspiel_games_leduc_poker(m);
   init_pyspiel_games_negotiation(m);
+  init_pyspiel_games_shogi(m);
   init_pyspiel_games_spades(m);
   init_pyspiel_games_tarok(m);
   init_pyspiel_games_tic_tac_toe(m);

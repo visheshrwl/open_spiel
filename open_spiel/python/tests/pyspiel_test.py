@@ -147,6 +147,7 @@ EXPECTED_MANDATORY_GAMES = frozenset([
     "rbc",
     "restricted_nash_response",
     "sheriff",
+    "shogi",
     "skat",
     "start_at",
     "solitaire",

@@ -83,6 +83,8 @@ set(PYTHON_BINDINGS ${PYTHON_BINDINGS}
   pybind11/games_pokerkit_wrapper.h
   pybind11/games_repeated_pokerkit.cc
   pybind11/games_repeated_pokerkit.h
+  pybind11/games_shogi.cc
+  pybind11/games_shogi.h
   pybind11/games_spades.cc
   pybind11/games_spades.h
   pybind11/games_tarok.cc
