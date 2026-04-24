@@ -227,6 +227,8 @@ set(GAME_SOURCES
   ultimate_tic_tac_toe/ultimate_tic_tac_toe.cc
   y/y.cc
   y/y.h
+  xiangqi/xiangqi.cc
+  xiangqi/xiangqi.h
   yacht/yacht.cc
   yacht/yacht.h
 )
@@ -739,6 +741,10 @@ endif()
 add_executable(y_test y/y_test.cc ${OPEN_SPIEL_OBJECTS}
                $<TARGET_OBJECTS:tests>)
 add_test(y_test y_test)
+
+add_executable(xiangqi_test xiangqi/xiangqi_test.cc ${OPEN_SPIEL_OBJECTS}
+               $<TARGET_OBJECTS:tests>)
+add_test(xiangqi_test xiangqi_test)
 
 add_executable(yacht_test yacht/yacht_test.cc ${OPEN_SPIEL_OBJECTS}
                $<TARGET_OBJECTS:tests>)
