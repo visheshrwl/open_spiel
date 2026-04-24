@@ -30,6 +30,8 @@ set(GAME_SOURCES
   catch/catch.h
   checkers/checkers.cc
   checkers/checkers.h
+  chinese_checkers/chinese_checkers.cc
+  chinese_checkers/chinese_checkers.h
   chess/chess.cc
   chess/chess.h
   chess/chess_board.cc
@@ -378,6 +380,10 @@ add_test(catch_test catch_test)
 add_executable(checkers_test checkers/checkers_test.cc ${OPEN_SPIEL_OBJECTS}
                $<TARGET_OBJECTS:tests>)
 add_test(checkers_test checkers_test)
+
+add_executable(chinese_checkers_test chinese_checkers/chinese_checkers_test.cc
+               ${OPEN_SPIEL_OBJECTS} $<TARGET_OBJECTS:tests>)
+add_test(chinese_checkers_test chinese_checkers_test)
 
 add_executable(chess_test chess/chess_test.cc ${OPEN_SPIEL_OBJECTS}
                $<TARGET_OBJECTS:tests>)
