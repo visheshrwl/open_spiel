@@ -39,15 +39,6 @@ pip install --upgrade -r requirements.txt
 [[ "$OPEN_SPIEL_ENABLE_PYTORCH" = "ON" ]] && pip install --no-cache-dir --upgrade $OPEN_SPIEL_PYTHON_PYTORCH_DEPS --index-url https://download.pytorch.org/whl/cpu --extra-index-url https://pypi.org/simple
 [[ "$OPEN_SPIEL_ENABLE_PYTHON_MISC" = "ON" ]] && pip install --no-cache-dir --upgrade $OPEN_SPIEL_PYTHON_MISC_DEPS
 
-# Seems to be an issue with the ppa install on Linux with Python 3.11 causing a timeout.
-# Solution appears to be disable IPv6.
-OS=`uname -a | awk '{print $1}'`
-if [[ "$OS" = "Linux" && "$OS_PYTHON_VERSION" == "3.11" ]]; then
-  sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-  sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-  sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
-fi
-
 # We need PYBIN to be python on its own so that the build and run script
 # finds the one from the virtual environment.
 PYBIN="python" ./open_spiel/scripts/build_and_run_tests.sh --github_ci=true
